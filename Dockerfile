@@ -24,7 +24,6 @@ RUN npm install --production
 
 # Copy the application
 COPY src/ ./src/
-COPY .env ./
 
 # Copy the script into the image
 COPY containerpulse-updater.sh /usr/local/bin/

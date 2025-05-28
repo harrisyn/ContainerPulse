@@ -1,3 +1,16 @@
+# Production Docker Compose for ContainerPulse
+# 
+# IMPORTANT: Before running in production, either:
+# 1. Set environment variables in your host system, OR
+# 2. Create a .env file in this directory with your actual values, OR  
+# 3. Modify the environment section below with your actual values
+#
+# Required environment variables:
+# - SESSION_SECRET: Strong random secret for session encryption
+# - JWT_SECRET: Strong random secret for JWT tokens
+# - WEBHOOK_SECRET: Secret for webhook authentication
+# - ADMIN_PASSWORD: Strong password for admin user
+
 services:
   containerpulse:
     build: .
@@ -17,10 +30,10 @@ services:
       - UPDATE_INTERVAL=86400  # Check once per day (in seconds)
       - LOG_LEVEL=info         # Options: debug, info, warn, error
       - SESSION_SECRET=change-this-session-secret-in-production
-      - JWT_SECRET=change-this-jwt-secret-in-production
-      - WEBHOOK_SECRET=change-this-webhook-secret
+      - JWT_SECRET=change-this-jwt-secret-in-production      - WEBHOOK_SECRET=change-this-webhook-secret
       - ADMIN_USERNAME=admin
       - ADMIN_PASSWORD=change-this-password  # Change this!
+      - DISCORD_WEBHOOK_URL=your-discord-webhook-url  # Change this!
     labels:
       - "auto-update=true"     # Self-updating
 

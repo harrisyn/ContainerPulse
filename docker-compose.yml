@@ -5,20 +5,18 @@ services:
       dockerfile: Dockerfile.dev  # Use development Dockerfile
     
     # Or use an image name if you push to a registry:
-    # image: yourusername/containerpulse:latest
-    container_name: containerpulse
+    # image: yourusername/containerpulse:latest    container_name: containerpulse
     restart: unless-stopped
     ports:
-      - "3000:3000"  # Web interface    volumes:
+      - "3000:3000"  # Web interface
+    volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - containerpulse-data:/var/lib/containerpulse
       - containerpulse-logs:/var/log/containerpulse
       # Hot reloading volumes - read/write for development
       - ./src:/app/src
       - ./package.json:/app/package.json
-      - ./.env:/app/.env:ro
-      - ./containerpulse-updater.sh:/usr/local/bin/containerpulse-updater.sh:ro
-      # Mount node_modules as volume to prevent conflicts
+      - ./containerpulse-updater.sh:/usr/local/bin/containerpulse-updater.sh:ro      # Mount node_modules as volume to prevent conflicts
       - /app/node_modules
     environment:
       - NODE_ENV=development
@@ -26,8 +24,7 @@ services:
       - LOG_LEVEL=debug        # Options: debug, info, warn, error
       - SESSION_SECRET=dev-session-secret-change-in-production
       - JWT_SECRET=dev-jwt-secret-change-in-production
-      - WEBHOOK_SECRET=dev-webhook-secret
-      - ADMIN_USERNAME=admin
+      - WEBHOOK_SECRET=dev-webhook-secret      - ADMIN_USERNAME=admin
       - ADMIN_PASSWORD=admin123  # Change this!
       - PORT=3000
     labels:
