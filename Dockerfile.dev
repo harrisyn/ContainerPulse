@@ -1,0 +1,53 @@
+FROM node:18-alpine
+
+LABEL maintainer="Harrison <harrison@example.com>"
+LABEL description="ContainerPulse Development - Docker container that documents and safely updates other containers with web interface"
+
+# Install system dependencies
+RUN apk add --no-cache \
+    bash \
+    curl \
+    docker-cli \
+    jq
+
+# Set up directories
+RUN mkdir -p /var/log/containerpulse \
+    /var/lib/containerpulse/container-inventory \
+    /var/lib/containerpulse/backups \
+    /app
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files first for better caching
+COPY package*.json ./
+
+# Install Node.js dependencies and nodemon
+RUN npm install && npm install -g nodemon
+
+# Copy the updater script into the image
+COPY containerpulse-updater.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/containerpulse-updater.sh
+
+# Copy source code (will be overridden by volumes in development)
+COPY src/ ./src/
+COPY .env ./
+
+# Environment variables with defaults
+ENV UPDATE_INTERVAL=300
+ENV LOG_LEVEL=debug
+ENV NODE_ENV=development
+ENV PORT=3000
+
+# Expose web interface port
+EXPOSE 3000
+
+# Volume for persistent data
+VOLUME ["/var/lib/containerpulse", "/var/log/containerpulse"]
+
+# Copy and set up development startup script
+COPY startup-dev.sh /usr/local/bin/startup-dev.sh
+RUN chmod +x /usr/local/bin/startup-dev.sh
+
+# Run both the web interface and updater script in development mode
+CMD ["/usr/local/bin/startup-dev.sh"]

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/styles.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'portainer-blue': '#4285F4',
+                        'portainer-dark': '#1E2029',
+                        'portainer-darker': '#181920',
+                        'portainer-light': '#F5F5F7',
+                        'portainer-success': '#34A853',
+                        'portainer-warning': '#FBBC04',
+                        'portainer-danger': '#EA4335',
+                        'portainer-border': '#E5E7EB',
+                        'portainer-card-bg': '#FFFFFF',
+                        'portainer-text-primary': '#1F2937',
+                        'portainer-text-secondary': '#6B7280'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-portainer-light font-sans text-portainer-text-primary">
+    <nav class="bg-portainer-dark shadow-lg">
+        <div class="px-4 py-3">
+            <div class="flex items-center justify-between">                <a href="/" class="flex items-center text-white text-xl font-semibold">
+                    <i class="fas fa-cube mr-2 text-portainer-blue"></i>
+                    ContainerPulse
+                </a>
+                <div class="flex items-center space-x-4">
+                    <% if (typeof user !== 'undefined' && user) { %>
+                        <span class="text-gray-300 text-sm">
+                            <i class="fas fa-user-circle mr-1"></i>
+                            <%= user.username %>
+                        </span>
+                        <a href="/logout" class="text-gray-300 hover:text-white text-sm transition-colors">
+                            <i class="fas fa-sign-out-alt mr-1"></i> Sign out
+                        </a>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="p-6 min-h-screen">
+        <%- body %>
+    </main>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/flowbite.min.js"></script>
+    <script src="/node_modules/flowbite/dist/flowbite.min.js"></script>
+</body>
+</html>

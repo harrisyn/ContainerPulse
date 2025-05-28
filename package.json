@@ -1,0 +1,42 @@
+{
+    "name": "containerpulse",
+    "version": "1.0.0",
+    "description": "ContainerPulse - Monitor and manage your Docker containers with real-time updates",
+    "main": "src/web/server.js",
+    "scripts": {
+        "start": "node src/web/server.js",
+        "dev": "nodemon src/web/server.js",
+        "install-deps": "npm install",
+        "build-css": "npx tailwindcss -i ./src/web/public/css/styles.css -o ./src/web/public/css/output.css --watch"
+    },
+    "dependencies": {
+        "axios": "^1.6.0",
+        "bcryptjs": "^2.4.3",
+        "body-parser": "^1.20.2",
+        "cors": "^2.8.5",
+        "dockerode": "^4.0.0",
+        "dotenv": "^16.3.1",
+        "ejs": "^3.1.9",
+        "express": "^4.18.2",
+        "express-session": "^1.17.3",
+        "flowbite": "^3.1.2",
+        "helmet": "^7.1.0",
+        "jsonwebtoken": "^9.0.2",
+        "node-docker-api": "^1.1.22"
+    },
+    "devDependencies": {
+        "autoprefixer": "^10.4.14",
+        "nodemon": "^3.0.1",
+        "postcss": "^8.4.24",
+        "tailwindcss": "^3.3.2"
+    },
+    "keywords": [
+        "docker",
+        "container",
+        "auto-update",
+        "web-interface",
+        "webhook"
+    ],
+    "author": "Harrison",
+    "license": "MIT"
+}

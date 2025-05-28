@@ -1,0 +1,29 @@
+services:
+  containerpulse:
+    build: .
+    
+    # Or use an image name if you push to a registry:
+    # image: yourusername/containerpulse:latest
+    container_name: containerpulse
+    restart: unless-stopped
+    ports:
+      - "3000:3000"  # Web interface
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - containerpulse-data:/var/lib/containerpulse
+      - containerpulse-logs:/var/log/containerpulse
+    environment:
+      - NODE_ENV=production
+      - UPDATE_INTERVAL=86400  # Check once per day (in seconds)
+      - LOG_LEVEL=info         # Options: debug, info, warn, error
+      - SESSION_SECRET=change-this-session-secret-in-production
+      - JWT_SECRET=change-this-jwt-secret-in-production
+      - WEBHOOK_SECRET=change-this-webhook-secret
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=change-this-password  # Change this!
+    labels:
+      - "auto-update=true"     # Self-updating
+
+volumes:
+  containerpulse-data:
+  containerpulse-logs:

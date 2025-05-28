@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <!-- Tailwind CSS -->
+    <link href="/css/output.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" crossorigin="anonymous">
+    <style>
+        :root {
+            /* Portainer-inspired color scheme */
+            --portainer-primary: #4285F4;
+            --portainer-secondary: #0A84FF;
+            --portainer-dark: #1E2029;
+            --portainer-darker: #181920;
+            --portainer-success: #34A853;
+            --portainer-danger: #EA4335;
+            --portainer-warning: #F59E0B;
+            --portainer-light: #F5F5F7;
+            --portainer-border: #E5E7EB;
+            --portainer-card-bg: #FFFFFF;
+            --portainer-text-primary: #1F2937;
+            --portainer-text-secondary: #6B7280;
+            --portainer-gray: #6B7280;        }
+
+        body {
+            background-color: var(--portainer-light);
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            color: var(--portainer-text-primary);
+            margin: 0;
+            padding: 0;
+        }
+        
+        .main-container {
+            background: var(--portainer-card-bg);
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .navbar {
+            background-color: var(--portainer-dark) !important;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 0.75rem 0;
+        }
+        
+        .navbar-brand {
+            color: #FFFFFF !important;
+            font-weight: 600;
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .navbar-brand i {
+            color: var(--portainer-primary);
+        }
+        
+        .navbar-text {
+            color: #D1D5DB !important;
+        }
+        
+        .nav-link {
+            color: #D1D5DB !important;
+            transition: color 0.2s ease;
+        }
+        
+        .nav-link:hover {
+            color: #FFFFFF !important;
+        }
+        
+        .content-area {
+            padding: 1.5rem;
+            flex: 1;
+            background-color: var(--portainer-light);
+        }
+        
+        .update-available { 
+            color: var(--portainer-danger); 
+            font-weight: 600;
+        }
+        
+        .up-to-date { 
+            color: var(--portainer-success); 
+            font-weight: 600;
+        }
+          .container-card {
+            transition: all 0.2s ease;
+            border: 1px solid var(--portainer-border);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            background: var(--portainer-card-bg);
+            margin-bottom: 1rem;
+            position: relative;
+        }
+        
+        .container-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-color: var(--portainer-primary);
+            transform: translateY(-1px);
+        }
+        
+        .container-card.update-available {
+            border-left: 4px solid var(--portainer-danger);
+            background: linear-gradient(90deg, rgba(234, 67, 53, 0.02) 0%, var(--portainer-card-bg) 8%);
+        }
+        
+        .container-card.up-to-date {
+            border-left: 4px solid var(--portainer-success);
+            background: linear-gradient(90deg, rgba(52, 168, 83, 0.02) 0%, var(--portainer-card-bg) 8%);
+        }
+    
+        .card-header {
+            background: linear-gradient(135deg, #FAFBFC 0%, #F3F4F6 100%);
+            border-bottom: 1px solid var(--portainer-border);
+            padding: 1rem 1.25rem;
+            position: relative;
+        }
+        
+        .card-title {
+            color: var(--portainer-text-primary);
+            font-weight: 600;
+            font-size: 1.125rem;
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+        
+        .card-title i {
+            color: var(--portainer-primary);
+            font-size: 1rem;
+        }
+          .status-badge {
+            font-size: 0.75rem;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .status-badge.bg-warning {
+            background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%) !important;
+            color: #92400E !important;
+            border: 1px solid #FCD34D;
+        }
+        
+        .status-badge.bg-success {
+            background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%) !important;
+            color: #065F46 !important;
+            border: 1px solid #6EE7B7;
+        }
+        
+        .webhook-url {
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+            background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
+            padding: 0.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--portainer-border);
+            word-break: break-all;
+            font-size: 0.8rem;
+            color: var(--portainer-text-secondary);
+            position: relative;
+        }
+          .webhook-url::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: var(--portainer-primary);
+            border-radius: 3px 0 0 3px;
+        }
+          .btn-refresh {
+            background: linear-gradient(135deg, var(--portainer-primary) 0%, var(--portainer-secondary) 100%);
+            border: 1px solid var(--portainer-primary);
+            border-radius: 6px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            color: white;
+            transition: all 0.2s ease;
+            font-size: 0.875rem;
+            box-shadow: 0 2px 4px rgba(66, 133, 244, 0.2);
+        }
+        
+        .btn-refresh:hover {
+            background: linear-gradient(135deg, var(--portainer-secondary) 0%, #0066CC 100%);
+            border-color: var(--portainer-secondary);
+            color: white;
+            box-shadow: 0 4px 8px rgba(66, 133, 244, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .btn-group .btn {
+            border-radius: 6px;
+            font-weight: 500;
+            padding: 0.5rem 0.875rem;
+            transition: all 0.2s ease;
+            font-size: 0.875rem;
+            border-width: 1px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-outline-primary {
+            color: var(--portainer-primary);
+            border-color: var(--portainer-primary);
+            background-color: white;
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: var(--portainer-primary);
+            border-color: var(--portainer-primary);
+            color: white;
+            box-shadow: 0 2px 6px rgba(66, 133, 244, 0.3);
+        }
+        
+        .btn-outline-secondary {
+            color: #6B7280;
+            border-color: #D1D5DB;
+            background-color: white;
+        }
+        
+        .btn-outline-secondary:hover {
+            background-color: #6B7280;
+            border-color: #6B7280;
+            color: white;
+            box-shadow: 0 2px 6px rgba(107, 114, 128, 0.3);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+            border-color: #F59E0B;
+            color: white;
+            box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
+        }
+        
+        .btn-warning:hover {
+            background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
+            border-color: #D97706;
+            color: white;
+            box-shadow: 0 4px 8px rgba(245, 158, 11, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .alert {
+            border-radius: 8px;
+            border: 1px solid;
+            font-size: 0.875rem;
+            padding: 0.75rem 1rem;
+        }
+        
+        .alert-danger {
+            background-color: #FEF2F2;
+            border-color: #FECACA;
+            color: #991B1B;
+        }
+        
+        .alert-success {
+            background-color: #F0FDF4;
+            border-color: #BBF7D0;
+            color: #166534;
+        }
+        
+        .alert-info {
+            background-color: #EFF6FF;
+            border-color: #BFDBFE;
+            color: #1E40AF;
+        }
+        
+        .alert-warning {
+            background-color: #FFFBEB;
+            border-color: #FED7AA;
+            color: #92400E;
+        }
+        
+        .modal-content {
+            border-radius: 8px;
+            border: 1px solid var(--portainer-border);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .modal-header {
+            background-color: var(--portainer-dark);
+            color: white;
+            border-bottom: 1px solid var(--portainer-border);
+            border-radius: 8px 8px 0 0;
+            padding: 1rem 1.5rem;
+        }
+        
+        .modal-title {
+            font-weight: 600;
+            font-size: 1.125rem;
+        }
+        
+        .btn-close {
+            filter: invert(1);
+        }
+          .dashboard-header {
+            background-color: var(--portainer-card-bg);
+            color: var(--portainer-text-primary);
+            padding: 2rem 0 1.5rem 0;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--portainer-border);
+        }
+        
+        .dashboard-title {
+            margin: 0;
+            font-size: 2.25rem;
+            font-weight: 600;
+            color: var(--portainer-text-primary);
+            display: flex;
+            align-items: center;
+        }
+        
+        .dashboard-title i {
+            color: var(--portainer-primary);
+            margin-right: 0.75rem;
+            font-size: 2rem;
+        }
+        
+        .dashboard-stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            display: flex;
+            align-items: center;
+            color: var(--portainer-text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        .stat-item i {
+            margin-right: 0.5rem;
+            color: var(--portainer-primary);
+        }
+        
+        .container-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 1.5rem;
+        }
+          .card-body {
+            padding: 1.5rem;
+        }
+        
+        .container-info {
+            background: linear-gradient(135deg, #FAFBFC 0%, #F9FAFB 100%);
+            border-radius: 6px;
+            padding: 1rem;
+            border: 1px solid #F3F4F6;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #F3F4F6;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            font-weight: 500;
+            color: var(--portainer-text-primary);
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            min-width: 80px;
+        }
+        
+        .info-label i {
+            color: var(--portainer-primary);
+            width: 16px;
+        }
+        
+        .info-value {
+            flex: 1;
+            text-align: right;
+            font-size: 0.875rem;
+        }
+        
+        .row {
+            margin-bottom: 0.5rem;
+        }
+        
+        .fw-bold {
+            font-weight: 600;
+            color: var(--portainer-text-primary);
+        }
+        
+        code {
+            background-color: #F3F4F6;
+            color: var(--portainer-text-primary);
+            padding: 0.125rem 0.25rem;
+            border-radius: 3px;
+            font-size: 0.875rem;
+        }
+        
+        .badge {
+            font-weight: 500;
+            text-transform: none;
+        }
+        
+        .bg-success {
+            background-color: var(--portainer-success) !important;
+        }
+        
+        .bg-danger {
+            background-color: var(--portainer-danger) !important;
+        }
+        
+        .bg-warning {
+            background-color: var(--portainer-warning) !important;
+            color: #1F2937 !important;
+        }
+        
+        .text-muted {
+            color: var(--portainer-text-secondary) !important;
+        }
+        
+        @media (max-width: 768px) {
+            .content-area {
+                padding: 1rem;
+            }
+            
+            .dashboard-title {
+                font-size: 1.5rem;
+            }
+            
+            .container-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .d-flex.justify-content-between {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .btn-group {
+                flex-direction: column;
+            }
+            
+            .btn-group .btn {
+                border-radius: 6px !important;
+                margin-bottom: 0.25rem;
+            }
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 0.875rem;
+            height: 0.875rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container bg-gray-100 min-h-screen flex flex-col">
+        <nav class="bg-gray-800 shadow-lg">
+            <div class="container mx-auto px-4 py-3 flex justify-between items-center">                
+                <a class="text-white text-xl font-bold flex items-center" href="/">
+                    <i class="fas fa-heartbeat text-blue-500 mr-2"></i>
+                    ContainerPulse
+                </a>
+                <div class="flex items-center space-x-4">
+                    <% if (typeof user !== 'undefined' && user) { %>
+                        <span class="text-gray-300">
+                            <i class="fas fa-user-circle mr-1"></i>
+                            <%= user.username %>
+                        </span>
+                        <a class="text-gray-300 hover:text-white transition" href="/logout">
+                            <i class="fas fa-sign-out-alt mr-1"></i> Sign out
+                        </a>
+                    <% } %>
+                </div>
+            </div>
+        </nav>
+
+        <div class="content-area flex-1 p-8">
+            <div class="dashboard-header bg-white shadow-md rounded-lg p-8 mb-8">
+            <div class="flex justify-between items-start">
+                <div>                <h1 class="text-3xl font-bold text-gray-800 flex items-center">
+                    <i class="fas fa-heartbeat text-blue-500 mr-4"></i>Container Monitoring
+                </h1>
+                <div class="dashboard-stats flex space-x-8 mt-6">
+                    <div class="stat-item flex items-center text-gray-600">
+                    <i class="fas fa-cube text-blue-500 mr-3"></i>
+                    <span><%= containers ? containers.length : 0 %> containers</span>
+                    </div>
+                    <% if (containers && containers.length > 0) { %>
+                    <% 
+                        const runningCount = containers.filter(c => c.state && c.state.Running).length;
+                        const updateCount = containers.filter(c => c.updateStatus && c.updateStatus.updateAvailable).length;
+                    %>
+                    <div class="stat-item flex items-center text-gray-600">
+                        <i class="fas fa-play-circle text-green-500 mr-3"></i>
+                        <span><%= runningCount %> running</span>
+                    </div>
+                    <% if (updateCount > 0) { %>
+                        <div class="stat-item flex items-center text-yellow-500">
+                        <i class="fas fa-exclamation-triangle mr-3"></i>
+                        <span><%= updateCount %> updates available</span>
+                        </div>
+                    <% } %>
+                    <% } %>
+                </div>
+                </div>
+                <button class="btn btn-refresh bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition">
+                <i class="fas fa-sync-alt mr-3"></i> Refresh
+                </button>
+            </div>
+            </div>
+
+            <% if (typeof error !== 'undefined' && error) { %>
+                <div class="alert alert-danger bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    <%= error %>
+                </div>
+            <% } %>
+            <div class="container-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="containers-grid">
+                <% if (containers && containers.length > 0) { %>
+                    <% containers.forEach(container => { %>
+                        <div class="container-card <%= container.updateStatus && container.updateStatus.updateAvailable ? 'update-available' : 'up-to-date' %>" data-container-id="<%= container.id %>" data-container-name="<%= container.name %>">
+                            <div class="card-header flex justify-between items-center bg-gray-50 border-b border-gray-200 p-4">
+                                <h5 class="card-title text-lg font-semibold text-gray-800 flex items-center">
+                                    <i class="fas fa-cube text-blue-500 mr-2"></i>
+                                    <%= container.name %>
+                                </h5>
+                                <% if (container.updateStatus && container.updateStatus.updateAvailable) { %>
+                                    <span class="status-badge-running inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                                        <i class="fas fa-exclamation-triangle mr-1"></i> Update Available
+                                    </span>
+                                <% } else { %>
+                                    <span class="status-badge-stopped inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                        <i class="fas fa-check-circle mr-1"></i> Up to date
+                                    </span>
+                                <% } %>
+                            </div>
+                            <div class="card-body p-4">
+                                <div class="container-info bg-gray-50 rounded-md p-4 border border-gray-200 mb-4">
+                                    <div class="info-row flex justify-between items-center mb-2">
+                                        <div class="info-label text-gray-600 font-medium flex items-center">
+                                            <i class="fas fa-layer-group text-blue-500 mr-2"></i>Image
+                                        </div>
+                                        <div class="info-value text-gray-800"><code><%= container.image %></code></div>
+                                    </div>
+                                    <div class="info-row flex justify-between items-center mb-2">
+                                        <div class="info-label text-gray-600 font-medium flex items-center">
+                                            <i class="fas fa-circle text-blue-500 mr-2"></i>Status
+                                        </div>
+                                        <div class="info-value">
+                                            <span class="<%= container.state && container.state.Running ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' %> inline-flex items-center px-3 py-1 rounded-full text-sm font-medium">
+                                                <i class="fas <%= container.state && container.state.Running ? 'fa-play' : 'fa-stop' %> mr-1"></i>
+                                                <%= container.state && container.state.Running ? 'Running' : 'Stopped' %>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="info-row flex justify-between items-center">
+                                        <div class="info-label text-gray-600 font-medium flex items-center">
+                                            <i class="fas fa-calendar text-blue-500 mr-2"></i>Created
+                                        </div>
+                                        <div class="info-value text-gray-500"><%= new Date(container.created).toLocaleDateString() %></div>
+                                    </div>
+                                </div>
+
+                                <% if (container.updateStatus && container.updateStatus.updateAvailable) { %>
+                                    <div class="alert alert-info bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded mb-4">
+                                        <div class="font-semibold mb-2">
+                                            <i class="fas fa-info-circle mr-2"></i> Update Available
+                                        </div>
+                                        <div class="update-details">
+                                            <div class="flex justify-between mb-1">
+                                                <span class="font-medium text-sm">Current:</span>
+                                                <code class="text-sm"><%= (container.updateStatus.currentImageId || '').substring(0, 12) %>...</code>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="font-medium text-sm">Latest:</span>
+                                                <code class="text-sm bg-blue-100 px-1 rounded"><%= (container.updateStatus.latestImageId || '').substring(0, 12) %>...</code>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <% } %>
+
+                                <div class="mb-4">
+                                    <div class="font-medium text-gray-600 mb-2">
+                                        <i class="fas fa-link text-blue-500 mr-2"></i>Webhook Endpoint
+                                    </div>
+                                    <div class="webhook-url bg-gray-50 border border-gray-200 rounded-md p-3 text-sm text-gray-600">
+                                        POST /webhook/<%= container.name %>
+                                    </div>
+                                </div>
+
+                                <div class="btn-group flex space-x-2">
+                                    <% if (container.updateStatus && container.updateStatus.updateAvailable) { %>
+                                        <button class="btn btn-warning bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition">
+                                            <i class="fas fa-download mr-1"></i> Update
+                                        </button>
+                                    <% } else { %>
+                                        <button class="btn btn-outline-primary border border-blue-500 text-blue-500 px-4 py-2 rounded-md hover:bg-blue-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition">
+                                            <i class="fas fa-search mr-1"></i> Check updates
+                                        </button>
+                                    <% } %>
+                                    <button class="btn btn-outline-secondary border border-gray-500 text-gray-500 px-4 py-2 rounded-md hover:bg-gray-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition">
+                                        <i class="fas fa-info-circle mr-1"></i> Inspect
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    <% }); %>
+                <% } else { %>
+                    <div class="col-span-1">
+                        <div class="alert alert-info bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded text-center">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            No containers with auto-update labels found. 
+                            <button type="button" class="text-blue-500 underline hover:text-blue-600" onclick="showLabelHelp()">
+                                Learn how to configure auto-updates
+                            </button>
+                        </div>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container Details Modal -->
+    <div id="containerDetailsModal" tabindex="-1" aria-hidden="true" class="fixed top-0 left-0 right-0 z-50 hidden w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full">
+        <div class="relative w-full max-w-2xl max-h-full">
+            <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
+                <div class="flex items-start justify-between p-4 border-b rounded-t dark:border-gray-600">
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Container Details</h3>
+                    <button type="button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ml-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white" data-modal-hide="containerDetailsModal">
+                        <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-6 space-y-6">
+                    <div id="containerDetailsContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Label Help Modal -->
+    <div id="labelHelpModal" tabindex="-1" aria-hidden="true" class="fixed top-0 left-0 right-0 z-50 hidden w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full">
+        <div class="relative w-full max-w-2xl max-h-full">
+            <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
+                <div class="flex items-start justify-between p-4 border-b rounded-t dark:border-gray-600">
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Label Information</h3>
+                    <button type="button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ml-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white" data-modal-hide="labelHelpModal">
+                        <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-6 space-y-6">
+                    <p class="text-base leading-relaxed text-gray-500 dark:text-gray-400">
+                        Labels are used to control the update behavior for containers. Here's what each label means:
+                    </p>
+                    <ul class="space-y-3 text-gray-500 dark:text-gray-400">
+                        <li><strong>com.dockerwatcher.enable:</strong> Set to "true" to enable automatic updates for this container</li>
+                        <li><strong>com.dockerwatcher.interval:</strong> How often to check for updates (in seconds)</li>
+                        <li><strong>com.dockerwatcher.webhook:</strong> URL to notify when updates are available</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Modal -->
+    <div id="updateModal" tabindex="-1" aria-hidden="true" class="fixed top-0 left-0 right-0 z-50 hidden w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full">
+        <div class="relative w-full max-w-2xl max-h-full">
+            <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
+                <div class="flex items-start justify-between p-4 border-b rounded-t dark:border-gray-600">
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Update Container</h3>
+                    <button type="button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ml-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white" data-modal-hide="updateModal">
+                        <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-6 space-y-6">
+                    <p class="text-base leading-relaxed text-gray-500 dark:text-gray-400">
+                        Are you sure you want to update this container? This will:
+                    </p>
+                    <ul class="list-disc pl-5 space-y-2 text-gray-500 dark:text-gray-400">
+                        <li>Pull the latest image version</li>
+                        <li>Stop the current container</li>
+                        <li>Remove the old container</li>
+                        <li>Create and start a new container with the same settings</li>
+                    </ul>
+                </div>
+                <div class="flex items-center justify-end p-6 space-x-2 border-t border-gray-200 rounded-b dark:border-gray-600">
+                    <button data-modal-hide="updateModal" type="button" class="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10">Cancel</button>
+                    <button type="button" onclick="updateContainer(this.dataset.containerId)" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Update</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal trigger buttons -->
+    <button type="button" data-modal-target="containerDetailsModal" data-modal-toggle="containerDetailsModal" class="hidden">View Details</button>
+    <button type="button" data-modal-target="labelHelpModal" data-modal-toggle="labelHelpModal" class="hidden">Label Help</button>
+    <button type="button" data-modal-target="updateModal" data-modal-toggle="updateModal" class="hidden">Update Container</button>
+
+    <!-- Script to initialize modals -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get all modal triggers
+            const modalTriggers = document.querySelectorAll('[data-modal-toggle]');
+            
+            // Add click event listeners to all modal triggers
+            modalTriggers.forEach(trigger => {
+                trigger.addEventListener('click', () => {
+                    const targetModal = document.getElementById(trigger.getAttribute('data-modal-target'));
+                    if (targetModal) {
+                        targetModal.classList.remove('hidden');
+                    }
+                });
+            });
+
+            // Get all close buttons
+            const closeButtons = document.querySelectorAll('[data-modal-hide]');
+            
+            // Add click event listeners to all close buttons
+            closeButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetModal = document.getElementById(button.getAttribute('data-modal-hide'));
+                    if (targetModal) {
+                        targetModal.classList.add('hidden');
+                    }
+                });
+            });
+
+            // Close modal when clicking outside
+            window.addEventListener('click', (e) => {
+                const modals = document.querySelectorAll('[id$="Modal"]');
+                modals.forEach(modal => {
+                    if (e.target === modal) {
+                        modal.classList.add('hidden');
+                    }
+                });
+            });
+        });
+
+        // Function to show container details
+        function showContainerDetails(containerId) {
+            const detailsButton = document.querySelector(`[data-modal-target="containerDetailsModal"]`);
+            if (detailsButton) {
+                detailsButton.click();
+            }
+        }
+
+        // Function to show label help
+        function showLabelHelp() {
+            const helpButton = document.querySelector(`[data-modal-target="labelHelpModal"]`);
+            if (helpButton) {
+                helpButton.click();
+            }
+        }        // Function to show update confirmation
+        function showUpdateConfirmation(containerId) {
+            const updateButton = document.querySelector(`[data-modal-target="updateModal"]`);
+            if (updateButton) {
+                // Get container name from the container element data attribute
+                const container = document.querySelector(`[data-container-id="${containerId}"]`);
+                const containerName = container ? container.dataset.containerName : containerId;
+                
+                // Set the container name in the modal button
+                const modalUpdateButton = document.querySelector('#updateModal button[onclick]');
+                if (modalUpdateButton) {
+                    modalUpdateButton.setAttribute('onclick', `updateContainer('${containerName}')`);
+                }
+                
+                updateButton.click();
+            }
+        }// Function to check for updates
+        async function checkForUpdates(containerId) {
+            try {
+                // Add loading state to the button
+                const container = document.querySelector(`[data-container-id="${containerId}"]`);
+                const checkButton = container.querySelector('.btn-outline-primary');
+                const originalContent = checkButton.innerHTML;
+                checkButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Checking...';
+                checkButton.disabled = true;
+
+                const response = await fetch(`/api/containers/${containerId}/check-update`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const data = await response.json();
+                
+                // Reset button
+                checkButton.innerHTML = originalContent;
+                checkButton.disabled = false;
+                
+                // Show result in a simple alert for now, or refresh to show updated status
+                if (data.updateAvailable) {
+                    alert(`Update available!\nCurrent: ${data.currentImageId.substring(0, 12)}...\nLatest: ${data.latestImageId.substring(0, 12)}...`);
+                    // Refresh the page to show updated status
+                    window.location.reload();
+                } else {
+                    alert('Container is already up to date!');
+                }
+            } catch (error) {
+                console.error('Error checking for updates:', error);
+                // Reset button
+                const container = document.querySelector(`[data-container-id="${containerId}"]`);
+                const checkButton = container.querySelector('.btn-outline-primary');
+                checkButton.innerHTML = '<i class="fas fa-search mr-1"></i> Check updates';
+                checkButton.disabled = false;
+                alert('Failed to check for updates. Please try again.');
+            }
+        }
+
+        // Function to inspect container
+        async function inspectContainer(containerId) {
+            try {
+                const response = await fetch(`/api/containers/${containerId}/inspect`);
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const data = await response.json();
+                
+                // Update the container details modal content
+                const detailsContent = document.getElementById('containerDetailsContent');
+                detailsContent.innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="text-lg font-semibold mb-2">Container Info</h4>
+                            <p><strong>ID:</strong> ${data.Id?.substring(0, 12) || 'N/A'}</p>
+                            <p><strong>Name:</strong> ${data.Name?.replace('/', '') || 'N/A'}</p>
+                            <p><strong>Image:</strong> ${data.Config?.Image || 'N/A'}</p>
+                            <p><strong>Status:</strong> ${data.State?.Status || 'N/A'}</p>
+                            <p><strong>Created:</strong> ${new Date(data.Created).toLocaleString()}</p>
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-semibold mb-2">Labels</h4>
+                            <div class="bg-gray-50 p-3 rounded">
+                                ${Object.entries(data.Config?.Labels || {}).map(([key, value]) => 
+                                    `<p><strong>${key}:</strong> ${value}</p>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Show the modal
+                showContainerDetails(containerId);
+            } catch (error) {
+                console.error('Error inspecting container:', error);
+                alert('Failed to inspect container. Please try again.');
+            }
+        }
+
+        // Function to update container
+        async function updateContainer(containerName) {
+            try {
+                const response = await fetch(`/api/containers/${containerName}/update`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const data = await response.json();
+                
+                // Close modal
+                document.getElementById('updateModal').classList.add('hidden');
+                
+                // Show success message
+                alert(data.message || 'Container update initiated successfully!');
+                
+                // Refresh the page to show updated status
+                window.location.reload();
+            } catch (error) {
+                console.error('Error updating container:', error);
+                alert('Failed to update container. Please try again.');
+            }
+        }
+
+        // Function to refresh the dashboard
+        async function refreshDashboard() {
+            try {
+                // Add loading state to refresh button
+                const refreshBtn = document.querySelector('.btn-refresh');
+                const originalContent = refreshBtn.innerHTML;
+                refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Refreshing...';
+                refreshBtn.disabled = true;
+
+                // Reload the page
+                window.location.reload();
+            } catch (error) {
+                console.error('Error refreshing dashboard:', error);
+                alert('Failed to refresh dashboard. Please try again.');
+                
+                // Reset refresh button
+                const refreshBtn = document.querySelector('.btn-refresh');
+                refreshBtn.innerHTML = originalContent;
+                refreshBtn.disabled = false;
+            }
+        }        // Update the check update button onclick
+        document.querySelectorAll('.btn-outline-primary').forEach(button => {
+            if (button.textContent.includes('Check updates')) {
+                button.onclick = function() {
+                    const containerId = this.closest('[data-container-id]').dataset.containerId;
+                    checkForUpdates(containerId);
+                }
+            } else if (button.textContent.includes('Inspect')) {
+                button.onclick = function() {
+                    const containerId = this.closest('[data-container-id]').dataset.containerId;
+                    inspectContainer(containerId);
+                }
+            }
+        });
+
+        // Update the update button onclick
+        document.querySelectorAll('.btn-warning').forEach(button => {
+            button.onclick = function() {
+                const containerId = this.closest('[data-container-id]').dataset.containerId;
+                showUpdateConfirmation(containerId);
+            }
+        });
+
+        // Update the inspect button onclick
+        document.querySelectorAll('.btn-outline-secondary').forEach(button => {
+            button.onclick = function() {
+                const containerId = this.closest('[data-container-id]').dataset.containerId;
+                inspectContainer(containerId);
+            }
+        });
+
+        // Update refresh button onclick
+        document.querySelector('.btn-refresh').onclick = refreshDashboard;
+    </script>
+
+</body>
+</html>
