@@ -145,6 +145,23 @@ document_containers() {
     log "info" "Container documentation complete. Inventory saved to $INVENTORY_FILE"
 }
 
+# Function to check if an image is locally built
+is_locally_built_image() {
+    local image_name="$1"
+    
+    # Check for Docker Compose naming patterns (contains underscore or hyphen without slash)
+    if [[ "$image_name" =~ ^[^/]*[_-][^/]*$ ]]; then
+        return 0  # Is locally built
+    fi
+    
+    # Check if image has no registry (no dots and no slashes)
+    if [[ ! "$image_name" =~ [./] ]]; then
+        return 0  # Is locally built
+    fi
+    
+    return 1  # Not locally built
+}
+
 # Function to check and update containers with auto-update label
 update_containers() {
     log "info" "Checking containers with auto-update label for updates..."
@@ -185,7 +202,13 @@ update_containers() {
         
         log "info" "Current image: $image_name"
         
-        # Pull the latest image
+        # Check if this is a locally built image
+        if is_locally_built_image "$image_name"; then
+            log "info" "Image $image_name appears to be locally built. Skipping update check."
+            continue
+        fi
+        
+        # Pull the latest image for registry images
         log "info" "Pulling latest image for $image_name"
         if ! docker pull "$image_name"; then
             log "error" "Failed to pull latest image for $container_name. Skipping update."

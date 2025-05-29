@@ -177,6 +177,17 @@ app.get('/api/containers/:id/inspect', requireAuth, async (req, res) => {
     }
 });
 
+// Test Docker connectivity endpoint
+app.get('/api/docker/status', requireAuth, async (req, res) => {
+    try {
+        const status = await dockerService.testConnection();
+        res.json(status);
+    } catch (error) {
+        console.error('Error testing Docker connection:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Webhook endpoint for external triggers (DockerHub, GitHub, etc.)
 app.post('/webhook/:containerName', webhookService.authenticateWebhook, async (req, res) => {
     try {

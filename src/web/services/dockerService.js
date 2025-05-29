@@ -5,7 +5,22 @@ const { promisify } = require('util');
 const Docker = require('dockerode');
 
 const execAsync = promisify(exec);
-const docker = new Docker({ socketPath: '/var/run/docker.sock' });
+
+// Try different Docker socket paths for better compatibility
+let docker;
+try {
+    // First try the standard Unix socket
+    docker = new Docker({ socketPath: '/var/run/docker.sock' });
+} catch (error) {
+    console.warn('Failed to connect to /var/run/docker.sock, trying alternative methods...');
+    try {
+        // Try with default settings (for Docker Desktop on Windows)
+        docker = new Docker();
+    } catch (fallbackError) {
+        console.error('Failed to initialize Docker connection:', fallbackError);
+        throw new Error('Unable to connect to Docker daemon. Ensure Docker is running and accessible.');
+    }
+}
 
 const INVENTORY_FILE = process.env.INVENTORY_FILE || '/var/lib/containerpulse/container-inventory/inventory.json';
 const UPDATE_SCRIPT = '/usr/local/bin/containerpulse-updater.sh';
@@ -86,22 +101,50 @@ class DockerService {
                 `docker inspect --format '{{.Id}}' "${container.image}"`
             );
             
-            // Pull latest image to check for updates
-            await execAsync(`docker pull "${container.image}"`);
-            
-            const { stdout: latestImageId } = await execAsync(
-                `docker inspect --format '{{.Id}}' "${container.image}"`
-            );
-            
             const currentId = currentImageId.trim();
-            const latestId = latestImageId.trim();
             
-            return {
-                currentImageId: currentId,
-                latestImageId: latestId,
-                updateAvailable: currentId !== latestId,
-                lastChecked: new Date().toISOString()
-            };
+            // Check if this is a locally built image (Docker Compose or custom built)
+            const isLocallyBuilt = this.isLocallyBuiltImage(container.image);
+            
+            if (isLocallyBuilt) {
+                console.log(`Image ${container.image} appears to be locally built. Skipping update check.`);
+                return {
+                    currentImageId: currentId,
+                    latestImageId: currentId,
+                    updateAvailable: false,
+                    isLocallyBuilt: true,
+                    lastChecked: new Date().toISOString()
+                };
+            }
+            
+            // For registry images, pull latest to check for updates
+            try {
+                await execAsync(`docker pull "${container.image}"`);
+                
+                const { stdout: latestImageId } = await execAsync(
+                    `docker inspect --format '{{.Id}}' "${container.image}"`
+                );
+                
+                const latestId = latestImageId.trim();
+                
+                return {
+                    currentImageId: currentId,
+                    latestImageId: latestId,
+                    updateAvailable: currentId !== latestId,
+                    isLocallyBuilt: false,
+                    lastChecked: new Date().toISOString()
+                };
+            } catch (pullError) {
+                // Handle pull failures gracefully (image not found, auth issues, etc.)
+                console.warn(`Failed to pull image ${container.image}: ${pullError.message}`);
+                return {
+                    currentImageId: currentId,
+                    latestImageId: null,
+                    updateAvailable: false,
+                    error: `Cannot check updates: ${pullError.message}`,
+                    lastChecked: new Date().toISOString()
+                };
+            }
         } catch (error) {
             console.error(`Error checking update status for ${container.name}:`, error);
             return {
@@ -202,31 +245,144 @@ class DockerService {
 
     async checkForUpdates(containerId) {
         try {
+            console.log(`Checking updates for container: ${containerId}`);
+            
+            // Validate container ID format
+            if (!containerId || containerId.length < 12) {
+                throw new Error('Invalid container ID provided');
+            }
+            
+            // Get container
             const container = await this.getContainer(containerId);
             const containerInfo = await container.inspect();
+            console.log(`Container found: ${containerInfo.Name}, Image: ${containerInfo.Config.Image}`);
             
             // Get current image
             const currentImage = containerInfo.Config.Image;
-            const currentImageInfo = await docker.getImage(currentImage).inspect();
+            if (!currentImage) {
+                throw new Error('Container has no image information');
+            }
             
-            // Pull latest image
-            await docker.pull(currentImage);
+            // Check if this is a locally built image (Docker Compose generates names like "project_service")
+            const isLocallyBuilt = currentImage.includes('_') || currentImage.includes('-') && !currentImage.includes('/');
+            
+            if (isLocallyBuilt) {
+                console.log(`Image ${currentImage} appears to be locally built. Skipping update check.`);
+                return {
+                    containerId,
+                    containerName: containerInfo.Name,
+                    currentImage,
+                    currentImageId: 'locally-built',
+                    latestImageId: 'locally-built',
+                    updateAvailable: false,
+                    isLocallyBuilt: true,
+                    message: 'This container uses a locally built image. No updates available from registry.',
+                    checkedAt: new Date().toISOString()
+                };
+            }
+            
+            let currentImageInfo;
+            try {
+                currentImageInfo = await docker.getImage(currentImage).inspect();
+            } catch (imageError) {
+                console.error(`Error inspecting current image ${currentImage}:`, imageError);
+                throw new Error(`Failed to inspect current image: ${currentImage}`);
+            }
+            
+            console.log(`Current image ID: ${currentImageInfo.Id}`);
+            
+            // Only try to pull if it's a registry image (contains / or is a known registry format)
+            if (!currentImage.includes('/') && !currentImage.match(/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/)) {
+                console.log(`Image ${currentImage} doesn't appear to be from a registry. Skipping pull.`);
+                return {
+                    containerId,
+                    containerName: containerInfo.Name,
+                    currentImage,
+                    currentImageId: currentImageInfo.Id,
+                    latestImageId: currentImageInfo.Id,
+                    updateAvailable: false,
+                    isLocallyBuilt: true,
+                    message: 'This image is not from a public registry. No updates available.',
+                    checkedAt: new Date().toISOString()
+                };
+            }
+            
+            // Pull latest image with timeout
+            try {
+                console.log(`Pulling latest image: ${currentImage}`);
+                const pullStream = await docker.pull(currentImage);
+                
+                // Wait for pull to complete with timeout
+                await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        reject(new Error('Image pull timeout (60 seconds)'));
+                    }, 60000);
+                    
+                    docker.modem.followProgress(pullStream, (err, output) => {
+                        clearTimeout(timeout);
+                        if (err) {
+                            console.error('Pull error:', err);
+                            reject(new Error(`Pull failed: ${err.message || err}`));
+                        } else {
+                            console.log('Pull completed successfully');
+                            resolve(output);
+                        }
+                    });
+                });
+            } catch (pullError) {
+                console.error(`Error pulling image ${currentImage}:`, pullError);
+                
+                // If it's a 404 or authentication error, treat as locally built
+                if (pullError.statusCode === 404 || pullError.message.includes('pull access denied')) {
+                    console.log(`Image ${currentImage} not found in registry. Treating as locally built.`);
+                    return {
+                        containerId,
+                        containerName: containerInfo.Name,
+                        currentImage,
+                        currentImageId: currentImageInfo.Id,
+                        latestImageId: currentImageInfo.Id,
+                        updateAvailable: false,
+                        isLocallyBuilt: true,
+                        message: 'This image is not available in any public registry. Likely locally built.',
+                        checkedAt: new Date().toISOString()
+                    };
+                }
+                
+                throw new Error(`Failed to pull latest image: ${pullError.message}`);
+            }
             
             // Get latest image info
-            const latestImageInfo = await docker.getImage(currentImage).inspect();
+            let latestImageInfo;
+            try {
+                latestImageInfo = await docker.getImage(currentImage).inspect();
+            } catch (latestImageError) {
+                console.error(`Error inspecting latest image ${currentImage}:`, latestImageError);
+                throw new Error(`Failed to inspect latest image: ${currentImage}`);
+            }
+            
+            console.log(`Latest image ID: ${latestImageInfo.Id}`);
             
             // Compare digests to check if update is available
             const updateAvailable = currentImageInfo.Id !== latestImageInfo.Id;
             
-            return {
+            const result = {
+                containerId,
+                containerName: containerInfo.Name,
+                currentImage,
                 currentImageId: currentImageInfo.Id,
                 latestImageId: latestImageInfo.Id,
                 updateAvailable,
+                isLocallyBuilt: false,
                 checkedAt: new Date().toISOString()
             };
+            
+            console.log(`Update check completed for ${containerId}: ${updateAvailable ? 'Update available' : 'Up to date'}`);
+            return result;
+            
         } catch (error) {
             console.error(`Error checking updates for container ${containerId}:`, error);
-            throw error;
+            // Return a more detailed error response
+            throw new Error(`Update check failed: ${error.message}`);
         }
     }
 
@@ -237,6 +393,18 @@ class DockerService {
         } catch (error) {
             console.error(`Error inspecting container ${containerId}:`, error);
             throw error;
+        }
+    }
+
+    // Test Docker daemon connectivity
+    async testConnection() {
+        try {
+            await docker.ping();
+            console.log('Docker daemon connection successful');
+            return { connected: true, message: 'Docker daemon is accessible' };
+        } catch (error) {
+            console.error('Docker daemon connection failed:', error);
+            return { connected: false, message: `Docker daemon not accessible: ${error.message}` };
         }
     }
 }
