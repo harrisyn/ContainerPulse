@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:24-alpine
 
 LABEL maintainer="Harrison <harrison@example.com>"
 LABEL description="ContainerPulse - A Docker container that documents and safely updates other containers with web interface"
@@ -20,10 +20,17 @@ WORKDIR /app
 
 # Copy package.json and install Node.js dependencies
 COPY package.json ./
-RUN npm install --production
+RUN npm install
 
-# Copy the application
+# Copy the application and config files
 COPY src/ ./src/
+COPY tailwind.config.js postcss.config.js ./
+
+# Build Tailwind CSS
+RUN npx tailwindcss -i ./src/web/public/css/styles.css -o ./src/web/public/css/output.css --minify
+
+# Clean up dev dependencies for production
+RUN npm prune --production
 
 # Copy the script into the image
 COPY containerpulse-updater.sh /usr/local/bin/

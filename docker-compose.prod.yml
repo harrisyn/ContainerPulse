@@ -13,10 +13,7 @@
 
 services:
   containerpulse:
-    build: .
-    
-    # Or use an image name if you push to a registry:
-    # image: yourusername/containerpulse:latest
+    image: harrisyn/containerpulse:latest
     container_name: containerpulse
     restart: unless-stopped
     ports:
@@ -30,12 +27,33 @@ services:
       - UPDATE_INTERVAL=86400  # Check once per day (in seconds)
       - LOG_LEVEL=info         # Options: debug, info, warn, error
       - SESSION_SECRET=change-this-session-secret-in-production
-      - JWT_SECRET=change-this-jwt-secret-in-production      - WEBHOOK_SECRET=change-this-webhook-secret
+      - JWT_SECRET=change-this-jwt-secret-in-production
+      - WEBHOOK_SECRET=change-this-webhook-secret
       - ADMIN_USERNAME=admin
       - ADMIN_PASSWORD=change-this-password  # Change this!
       - DISCORD_WEBHOOK_URL=your-discord-webhook-url  # Change this!
     labels:
       - "auto-update=true"     # Self-updating
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Lightweight watchdog container to monitor ContainerPulse
+  containerpulse-watchdog:
+    image: docker:cli
+    container_name: containerpulse-watchdog
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./watchdog.sh:/watchdog.sh:ro
+    command: ["sh", "/watchdog.sh"]
+    depends_on:
+      - containerpulse
+    profiles:
+      - watchdog  # Use 'docker-compose --profile watchdog up -d' to enable
 
 volumes:
   containerpulse-data:
