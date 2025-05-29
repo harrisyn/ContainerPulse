@@ -95,7 +95,9 @@ dist
 
 # Gatsby files
 .cache/
-public
+public/
+# BUT keep our web application's public folder
+!src/web/public/
 
 # Storybook build outputs
 .out
@@ -169,3 +171,10 @@ credentials/
 # Build artifacts
 dist/
 build/
+
+# IMPORTANT: Keep src/ folder and its contents for Docker builds
+# src/ - Contains all application source code (NEVER IGNORE)
+# src/web/public/css/output.css - Generated Tailwind CSS (include in repo for Docker)
+
+# Ensure Tailwind output CSS is tracked (override any CSS ignores)
+!src/web/public/css/output.css
