@@ -21,6 +21,7 @@ WORKDIR /app
 
 # Copy package files first for better caching
 COPY package*.json ./
+COPY tailwind.config.js postcss.config.js ./
 
 # Install Node.js dependencies and nodemon
 RUN npm install && npm install -g nodemon
@@ -32,6 +33,9 @@ RUN chmod +x /usr/local/bin/containerpulse-updater.sh
 # Copy source code (will be overridden by volumes in development)
 COPY src/ ./src/
 COPY .env ./
+
+# Build Tailwind CSS to generate output.css from styles.css
+RUN npx tailwindcss -i ./src/web/public/css/styles.css -o ./src/web/public/css/output.css --minify
 
 # Environment variables with defaults
 ENV UPDATE_INTERVAL=300

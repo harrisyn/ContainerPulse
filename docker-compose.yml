@@ -32,7 +32,6 @@ services:
     # Enable tty for better logging output
     tty: true
     stdin_open: true
-    
 
 volumes:
   containerpulse-data:

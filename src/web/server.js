@@ -72,45 +72,6 @@ app.set('views', path.join(__dirname, 'views'));
 // Static files
 app.use('/static', express.static(path.join(__dirname, 'public')));
 
-// Debug route to check file paths
-app.get('/debug/paths', (req, res) => {
-    const publicPath = path.join(__dirname, 'public');
-    const cssPath = path.join(__dirname, 'public', 'css', 'output.css');
-    const fileExists = fs.existsSync(cssPath);
-    
-    res.json({
-        __dirname,
-        publicPath,
-        cssPath,
-        fileExists,
-        currentWorkingDir: process.cwd()
-    });
-});
-
-// Health check endpoint (no authentication required)
-app.get('/api/health', (req, res) => {
-    try {
-        const uptime = process.uptime();
-        const memoryUsage = process.memoryUsage();
-        
-        res.json({
-            status: 'healthy',
-            timestamp: new Date().toISOString(),
-            uptime: `${Math.floor(uptime / 60)} minutes`,
-            memory: {
-                used: Math.round(memoryUsage.heapUsed / 1024 / 1024) + ' MB',
-                total: Math.round(memoryUsage.heapTotal / 1024 / 1024) + ' MB'
-            },
-            version: process.env.npm_package_version || 'unknown'
-        });
-    } catch (error) {
-        res.status(500).json({
-            status: 'unhealthy',
-            error: error.message
-        });
-    }
-});
-
 // Middleware to check if user is authenticated
 const requireAuth = (req, res, next) => {
     if (req.session && req.session.user) {
