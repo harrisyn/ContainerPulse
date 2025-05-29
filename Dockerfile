@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:24-alpine
 
 LABEL maintainer="Harrison <harrison@example.com>"
 LABEL description="ContainerPulse - A Docker container that documents and safely updates other containers with web interface"

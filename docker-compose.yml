@@ -1,11 +1,9 @@
 services:
   containerpulse:
-    build: 
-      context: .
-      dockerfile: Dockerfile.dev  # Use development Dockerfile
-    
+    build: .
     # Or use an image name if you push to a registry:
-    # image: yourusername/containerpulse:latest    container_name: containerpulse
+    # image: yourusername/containerpulse:latest
+    container_name: containerpulse
     restart: unless-stopped
     ports:
       - "3000:3000"  # Web interface
@@ -14,10 +12,10 @@ services:
       - containerpulse-data:/var/lib/containerpulse
       - containerpulse-logs:/var/log/containerpulse
       # Hot reloading volumes - read/write for development
-      - ./src:/app/src
-      - ./package.json:/app/package.json
-      - ./containerpulse-updater.sh:/usr/local/bin/containerpulse-updater.sh:ro      # Mount node_modules as volume to prevent conflicts
-      - /app/node_modules
+      # - ./src:/app/src
+      # - ./package.json:/app/package.json
+      # - ./containerpulse-updater.sh:/usr/local/bin/containerpulse-updater.sh:ro      # Mount node_modules as volume to prevent conflicts
+      # - /app/node_modules
     environment:
       - NODE_ENV=development
       - UPDATE_INTERVAL=300    # Check every 5 minutes in dev (in seconds)
