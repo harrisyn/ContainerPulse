@@ -1,0 +1,58 @@
+# Multi-platform optimized Dockerfile
+FROM node:24-alpine
+
+LABEL maintainer="Harrison <harrison@example.com>"
+LABEL description="ContainerPulse - A Docker container that documents and safely updates other containers with web interface"
+
+# Install dependencies
+RUN apk add --no-cache \
+    bash \
+    curl \
+    docker-cli \
+    jq
+
+# Set up directories
+RUN mkdir -p /var/log/containerpulse \
+    /var/lib/containerpulse/container-inventory \
+    /var/lib/containerpulse/backups
+
+# Set working directory
+WORKDIR /app
+
+# Copy package.json and install Node.js dependencies with platform-specific optimizations
+COPY package.json ./
+
+# Use buildx cache mounts and platform-specific npm configurations for faster ARM64 builds
+RUN --mount=type=cache,target=/root/.npm \
+    --mount=type=cache,target=/tmp/npm-cache \
+    npm config set cache /tmp/npm-cache && \
+    npm install --prefer-offline --no-audit --progress=false
+
+# Copy Tailwind config files for CSS build
+COPY tailwind.config.js postcss.config.js ./
+
+# Copy source files
+COPY src/ ./src/
+
+# Build Tailwind CSS with cache mount for faster rebuilds
+RUN --mount=type=cache,target=/tmp/tailwind-cache \
+    npx tailwindcss -i ./src/web/public/css/styles.css -o ./src/web/public/css/output.css --minify
+
+# Copy scripts and set permissions
+COPY containerpulse-updater.sh startup.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/containerpulse-updater.sh /usr/local/bin/startup.sh
+
+# Environment variables with defaults
+ENV UPDATE_INTERVAL=86400
+ENV LOG_LEVEL=info
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Expose web interface port
+EXPOSE 3000
+
+# Volume for persistent data
+VOLUME ["/var/lib/containerpulse", "/var/log/containerpulse"]
+
+# Run both the web interface and updater script
+CMD ["/usr/local/bin/startup.sh"]

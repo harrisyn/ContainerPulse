@@ -65,6 +65,7 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
           outputs: digest  # Enable the digest output
+        timeout-minutes: 30  # Increase timeout for multi-platform builds
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1
