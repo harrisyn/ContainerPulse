@@ -365,6 +365,9 @@ class DockerService {
             // Compare digests to check if update is available
             const updateAvailable = currentImageInfo.Id !== latestImageInfo.Id;
             
+            // Check update approach label
+            const updateApproach = containerInfo.Config.Labels?.['update-approach'] || 'auto';
+            
             const result = {
                 containerId,
                 containerName: containerInfo.Name,
@@ -372,11 +375,16 @@ class DockerService {
                 currentImageId: currentImageInfo.Id,
                 latestImageId: latestImageInfo.Id,
                 updateAvailable,
+                updateApproach,
                 isLocallyBuilt: false,
                 checkedAt: new Date().toISOString()
             };
             
-            console.log(`Update check completed for ${containerId}: ${updateAvailable ? 'Update available' : 'Up to date'}`);
+            if (updateAvailable && updateApproach === 'notify') {
+                result.message = 'Update available - notification mode enabled (update-approach=notify)';
+            }
+            
+            console.log(`Update check completed for ${containerId}: ${updateAvailable ? 'Update available' : 'Up to date'} (approach: ${updateApproach})`);
             return result;
             
         } catch (error) {
@@ -394,6 +402,39 @@ class DockerService {
             console.error(`Error inspecting container ${containerId}:`, error);
             throw error;
         }
+    }
+
+    // Check if an image is locally built (Docker Compose or custom built)
+    isLocallyBuiltImage(imageName) {
+        // Images without registry (no slash or dot before first slash) are likely locally built
+        // Examples: "myapp", "docker_watcherr-containerpulse", etc.
+        // Standard Docker Hub images: "nginx", "alpine", "postgres" are NOT locally built
+        // Registry images typically have format: "registry.com/user/repo" or "user/repo"
+        
+        if (!imageName || typeof imageName !== 'string') {
+            return false;
+        }
+        
+        // If the image name contains a registry domain (has dots)
+        if (imageName.includes('.') && imageName.indexOf('/') > imageName.indexOf('.')) {
+            return false;
+        }
+        
+        // If it's a standard Docker Hub image (single name or user/repo format without dots)
+        const parts = imageName.split('/');
+        if (parts.length === 1) {
+            // Single name - check for custom patterns (underscore, hyphen, compose patterns)
+            // Standard images like "nginx", "alpine" should NOT be considered locally built
+            return imageName.includes('-') || imageName.includes('_');
+        }
+        
+        if (parts.length === 2 && !parts[0].includes('.')) {
+            // Format: user/repo - likely Docker Hub
+            return false;
+        }
+        
+        // Everything else is likely locally built
+        return true;
     }
 
     // Test Docker daemon connectivity

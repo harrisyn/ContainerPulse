@@ -73,35 +73,225 @@ docker-compose up -d
 Changes to the source code will automatically reload the web interface.
 
 ## Configuration Options
-Configure the updater by modifying the environment variables in your `docker-compose.yml`:
 
-| Variable         | Description                        | Default      |
-|------------------|------------------------------------|--------------|
-| UPDATE_INTERVAL  | Time between update checks (secs)  | 86400 (1 day)|
-| LOG_LEVEL        | Logging verbosity                  | info         |
+Configure ContainerPulse by modifying the environment variables in your `docker-compose.yml`:
 
-## Enabling Auto-Updates for Your Containers
-Add any of these labels to your containers to enable automatic updates:
+### Core Settings
+
+| Variable | Description | Default | Options |
+|----------|-------------|---------|---------|
+| `NODE_ENV` | Application environment | `development` | `development`, `production` |
+| `UPDATE_INTERVAL` | Time between update checks (seconds) | `300` (5 min) | Any positive integer |
+| `LOG_LEVEL` | Logging verbosity | `debug` | `debug`, `info`, `warn`, `error` |
+| `PORT` | Web interface port | `3000` | Any valid port number |
+| `CLEANUP_OLD_IMAGES` | Remove old images after updates | `false` | `true`, `false` |
+
+### Security Settings
+
+| Variable | Description | Default | Notes |
+|----------|-------------|---------|-------|
+| `SESSION_SECRET` | Session encryption key | `dev-session-secret-change-in-production` | **Change in production!** |
+| `JWT_SECRET` | JWT token encryption key | `dev-jwt-secret-change-in-production` | **Change in production!** |
+| `WEBHOOK_SECRET` | Webhook authentication secret | `dev-webhook-secret` | Used for external webhook calls |
+| `ADMIN_USERNAME` | Web interface admin username | `admin` | Change for security |
+| `ADMIN_PASSWORD` | Web interface admin password | `admin123` | **Change in production!** |
+
+### Email Notification Settings
+
+| Variable | Description | Default | Example |
+|----------|-------------|---------|---------|
+| `EMAIL_ENABLED` | Enable email notifications | `false` | `true`, `false` |
+| `EMAIL_TO` | Recipient email address | (empty) | `admin@example.com` |
+| `EMAIL_FROM` | Sender email address | `containerpulse@localhost` | `noreply@company.com` |
+| `EMAIL_SUBJECT` | Email subject template | `ContainerPulse Container Update Available` | Custom subject |
+| `SMTP_SERVER` | SMTP server hostname | (empty) | `smtp.gmail.com`, `smtp.office365.com` |
+| `SMTP_PORT` | SMTP server port | `587` | `587` (STARTTLS), `465` (SSL), `25` (plain) |
+| `SMTP_USER` | SMTP username | (empty) | `user@gmail.com` |
+| `SMTP_PASSWORD` | SMTP password | (empty) | App password or account password |
+
+## Container Labels and Update Approaches
+
+ContainerPulse supports multiple labeling strategies for maximum compatibility and flexibility.
+
+### Basic Auto-Update Labels
+
+Add any of these labels to enable automatic updates:
 
 ```yaml
 labels:
   - "auto-update=true"
-  # OR
-  - "com.your.auto-update=true"
-  # OR (for Watchtower compatibility)
+  # OR for namespaced approach
+  - "com.containerpulse.auto-update=true"
+  # OR for Watchtower compatibility
   - "com.github.containrrr.watchtower.enable=true"
   - "com.centurylinklabs.watchtower.enable=true"
 ```
 
-Example Docker Compose service with auto-update enabled:
+### Update Approach Labels
 
+Control how updates are handled with the `update-approach` label:
+
+#### Automatic Updates (Default)
+```yaml
+labels:
+  - "auto-update=true"
+  - "update-approach=auto"  # Optional - this is the default
+```
+- Containers are automatically updated when new images are available
+- No manual intervention required
+
+#### Notification Only
+```yaml
+labels:
+  - "auto-update=true"
+  - "update-approach=notify"
+```
+- ContainerPulse detects updates but doesn't apply them automatically
+- Sends email notifications when updates are available
+- Requires manual update through web interface or webhook
+
+### Complete Docker Compose Examples
+
+#### Example 1: Web Server with Auto-Updates
 ```yaml
 services:
-  my-service:
+  nginx-app:
     image: nginx:latest
     restart: unless-stopped
+    ports:
+      - "80:80"
     labels:
       - "auto-update=true"
+      - "update-approach=auto"
+    volumes:
+      - ./html:/usr/share/nginx/html:ro
+```
+
+#### Example 2: Database with Notification-Only Updates
+```yaml
+services:
+  postgres-db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: myapp
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    labels:
+      - "auto-update=true"
+      - "update-approach=notify"  # Only notify, don't auto-update
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+```
+
+#### Example 3: Application with Custom Labels
+```yaml
+services:
+  my-app:
+    image: myregistry.com/myapp:latest
+    restart: unless-stopped
+    labels:
+      - "com.containerpulse.auto-update=true"
+      - "com.containerpulse.update-approach=auto"
+      - "com.containerpulse.description=My awesome application"
+```
+
+## Email Notification Setup
+
+### Gmail Configuration
+```yaml
+environment:
+  - EMAIL_ENABLED=true
+  - EMAIL_TO=admin@company.com
+  - EMAIL_FROM=containerpulse@company.com
+  - SMTP_SERVER=smtp.gmail.com
+  - SMTP_PORT=587
+  - SMTP_USER=your-gmail@gmail.com
+  - SMTP_PASSWORD=your-app-password  # Use App Password, not account password
+```
+
+### Office 365 Configuration
+```yaml
+environment:
+  - EMAIL_ENABLED=true
+  - EMAIL_TO=admin@company.com
+  - EMAIL_FROM=containerpulse@company.com
+  - SMTP_SERVER=smtp.office365.com
+  - SMTP_PORT=587
+  - SMTP_USER=your-email@company.com
+  - SMTP_PASSWORD=your-password
+```
+
+### Custom SMTP Server Configuration
+```yaml
+environment:
+  - EMAIL_ENABLED=true
+  - EMAIL_TO=admin@company.com
+  - EMAIL_FROM=containerpulse@company.com
+  - SMTP_SERVER=mail.company.com
+  - SMTP_PORT=587
+  - SMTP_USER=containerpulse@company.com
+  - SMTP_PASSWORD=smtp-password
+```
+
+### Email Notification Triggers
+
+Email notifications are sent when:
+1. **Update Available**: A container with `update-approach=notify` has an available update
+2. **Update Success**: A container was successfully updated (if enabled)
+3. **Update Failure**: A container update failed (always sent if email is enabled)
+
+### Email Content Example
+
+```
+Subject: ContainerPulse Container Update Available
+
+Container Update Notification
+============================
+
+Container: nginx-app
+Current Image: nginx:1.20
+Available Update: nginx:latest
+Update Approach: notify
+
+A new version is available for this container. 
+Log into the ContainerPulse dashboard to review and apply the update.
+
+Dashboard: http://your-server:3000
+Container Details: http://your-server:3000/containers/nginx-app
+
+This is an automated message from ContainerPulse.
+```
+
+### Email Troubleshooting
+
+#### Gmail Setup Issues
+1. **Enable 2-Factor Authentication** on your Google account
+2. **Generate an App Password**: Go to Google Account Settings → Security → App passwords
+3. **Use the App Password** in `SMTP_PASSWORD`, not your account password
+4. **Check Less Secure Apps**: If not using 2FA, you may need to enable "Less secure app access"
+
+#### Common SMTP Issues
+- **Port 587**: Use with STARTTLS (most common)
+- **Port 465**: Use with SSL/TLS
+- **Port 25**: Usually blocked by ISPs
+- **Authentication**: Ensure username/password are correct
+- **Firewall**: Check that outbound SMTP ports are not blocked
+
+#### Testing Email Configuration
+```bash
+# Check if emails are being sent (look for SMTP logs)
+docker-compose logs containerpulse | grep -i smtp
+
+# Test with a container that has notify approach
+docker run -d --name test-notify --label "auto-update=true" --label "update-approach=notify" nginx:1.20
+```
+
+#### Email Logs
+Enable debug logging to see detailed email information:
+```yaml
+environment:
+  - LOG_LEVEL=debug
 ```
 
 ## Monitoring and Management
@@ -248,6 +438,86 @@ JWT_SECRET=your-jwt-secret-for-tokens
 SESSION_SECRET=your-session-secret
 ```
 
+## Production Configuration
+
+### Production Environment File (.env)
+
+Create a `.env` file in your project directory with production values:
+
+```bash
+# Core Settings
+NODE_ENV=production
+UPDATE_INTERVAL=86400  # Check once daily in production
+LOG_LEVEL=info
+PORT=3000
+
+# Security Settings (CHANGE THESE!)
+SESSION_SECRET=your-very-long-random-session-secret-here
+JWT_SECRET=your-very-long-random-jwt-secret-here
+WEBHOOK_SECRET=your-webhook-secret-for-external-systems
+ADMIN_USERNAME=your-admin-username
+ADMIN_PASSWORD=your-secure-admin-password
+
+# Email Configuration
+EMAIL_ENABLED=true
+EMAIL_TO=admin@yourcompany.com
+EMAIL_FROM=containerpulse@yourcompany.com
+EMAIL_SUBJECT=ContainerPulse: Container Update Available
+SMTP_SERVER=smtp.yourcompany.com
+SMTP_PORT=587
+SMTP_USER=containerpulse@yourcompany.com
+SMTP_PASSWORD=your-smtp-password
+
+# Image Management
+CLEANUP_OLD_IMAGES=true  # Clean up old images in production
+```
+
+### Production Docker Compose
+
+```yaml
+services:
+  containerpulse:
+    image: containerpulse:latest  # Use a specific tag in production
+    container_name: containerpulse
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - containerpulse-data:/var/lib/containerpulse
+      - containerpulse-logs:/var/log/containerpulse
+    env_file:
+      - .env  # Load environment variables from file
+    labels:
+      - "auto-update=true"
+    # Security: Run as non-root user (optional)
+    # user: "1000:1000"
+    
+    # Resource limits (optional)
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+
+volumes:
+  containerpulse-data:
+  containerpulse-logs:
+```
+
+### Security Best Practices
+
+1. **Change Default Credentials**: Always change default usernames and passwords
+2. **Use Strong Secrets**: Generate long, random strings for all secret environment variables
+3. **Secure .env Files**: Never commit `.env` files to version control
+4. **Network Security**: Consider placing ContainerPulse in a private network
+5. **Resource Limits**: Set appropriate CPU and memory limits
+6. **Regular Updates**: Keep the ContainerPulse image updated
+7. **Log Monitoring**: Monitor logs for suspicious activity
+
 ## GitHub Actions & CI/CD
 
 ContainerPulse includes automated GitHub workflows for building, testing, and deploying Docker images.
@@ -366,3 +636,60 @@ docker-compose logs -f
 - Use GitHub secrets for CI/CD credentials
 - Regularly update dependencies and base images
 - Monitor security scan results in GitHub Security tab
+
+## Quick Reference
+
+### Essential Environment Variables
+```bash
+# Production Essentials
+NODE_ENV=production
+SESSION_SECRET=your-random-secret
+JWT_SECRET=your-jwt-secret
+ADMIN_PASSWORD=your-secure-password
+
+# Email Notifications
+EMAIL_ENABLED=true
+EMAIL_TO=admin@company.com
+SMTP_SERVER=smtp.gmail.com
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+```
+
+### Container Labels Cheat Sheet
+```yaml
+# Basic auto-update
+labels:
+  - "auto-update=true"
+
+# Auto-update with immediate application
+labels:
+  - "auto-update=true"
+  - "update-approach=auto"
+
+# Update detection with email notification only
+labels:
+  - "auto-update=true"
+  - "update-approach=notify"
+
+# Watchtower compatibility
+labels:
+  - "com.github.containrrr.watchtower.enable=true"
+```
+
+### Common Commands
+```bash
+# Build and start
+docker-compose up -d --build
+
+# View logs
+docker-compose logs -f containerpulse
+
+# Restart service
+docker-compose restart containerpulse
+
+# Force update check
+docker exec containerpulse kill -USR1 1
+
+# View container inventory
+docker exec containerpulse cat /var/lib/containerpulse/container-inventory/inventory.json
+```

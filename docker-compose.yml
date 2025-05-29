@@ -26,6 +26,19 @@ services:
       - ADMIN_USERNAME=admin
       - ADMIN_PASSWORD=admin123  # Change this!
       - PORT=3000
+      
+      # Image cleanup settings
+      - CLEANUP_OLD_IMAGES=false  # Set to "true" to remove old images after successful updates
+      
+      # Email notification settings (for containers with update-approach=notify label)
+      - EMAIL_ENABLED=false       # Set to "true" to enable email notifications
+      - EMAIL_TO=                 # Email address to send notifications to
+      - EMAIL_FROM=containerpulse@localhost
+      - EMAIL_SUBJECT=ContainerPulse Container Update Available
+      - SMTP_SERVER=              # SMTP server (e.g., smtp.gmail.com)
+      - SMTP_PORT=587             # SMTP port
+      - SMTP_USER=                # SMTP username
+      - SMTP_PASSWORD=            # SMTP password
     labels:
       - "auto-update=true"     # Self-updating
     # Enable tty for better logging output

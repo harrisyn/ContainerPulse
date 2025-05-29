@@ -12,6 +12,17 @@ BACKUP_DIR="/var/lib/containerpulse/backups"
 # Get settings from environment variables
 UPDATE_INTERVAL=${UPDATE_INTERVAL:-86400}  # Default: 24 hours
 LOG_LEVEL=${LOG_LEVEL:-"info"}
+CLEANUP_OLD_IMAGES=${CLEANUP_OLD_IMAGES:-"false"}  # Set to "true" to remove old images after update
+
+# Email notification settings
+EMAIL_ENABLED=${EMAIL_ENABLED:-"false"}
+EMAIL_TO=${EMAIL_TO:-""}
+EMAIL_FROM=${EMAIL_FROM:-"containerpulse@localhost"}
+EMAIL_SUBJECT=${EMAIL_SUBJECT:-"ContainerPulse: Container Update Available"}
+SMTP_SERVER=${SMTP_SERVER:-"localhost"}
+SMTP_PORT=${SMTP_PORT:-"587"}
+SMTP_USER=${SMTP_USER:-""}
+SMTP_PASSWORD=${SMTP_PASSWORD:-""}
 
 # Create necessary directories
 mkdir -p "$(dirname "$LOG_FILE")" "$(dirname "$INVENTORY_FILE")" "$BACKUP_DIR"
@@ -47,6 +58,73 @@ log() {
 
 log "info" "Starting Docker container auto-updater"
 log "info" "Update interval set to $UPDATE_INTERVAL seconds"
+
+# Function to send email notifications
+send_email_notification() {
+    local container_name="$1"
+    local current_image="$2"
+    local available_update="$3"
+    
+    if [ "$EMAIL_ENABLED" != "true" ] || [ -z "$EMAIL_TO" ]; then
+        log "debug" "Email notifications disabled or no recipient configured"
+        return 0
+    fi
+    
+    local email_body
+    email_body=$(cat <<EOF
+Container Update Available
+
+Container: $container_name
+Current Image: $current_image
+Update Available: $available_update
+
+This container has the 'update-approach=notify' label, so it will not be automatically updated.
+Please review and update manually if desired.
+
+ContainerPulse Auto-Updater
+$(date)
+EOF
+)
+    
+    # Try to send email using available methods
+    if command -v sendmail >/dev/null 2>&1; then
+        # Use sendmail if available
+        {
+            echo "To: $EMAIL_TO"
+            echo "From: $EMAIL_FROM"
+            echo "Subject: $EMAIL_SUBJECT"
+            echo ""
+            echo "$email_body"
+        } | sendmail "$EMAIL_TO"
+        log "info" "Email notification sent via sendmail to $EMAIL_TO for container $container_name"
+    elif command -v curl >/dev/null 2>&1 && [ -n "$SMTP_SERVER" ] && [ -n "$SMTP_USER" ]; then
+        # Use curl with SMTP if configured
+        local temp_email_file="/tmp/containerpulse_email_$$.txt"
+        {
+            echo "To: $EMAIL_TO"
+            echo "From: $EMAIL_FROM"
+            echo "Subject: $EMAIL_SUBJECT"
+            echo ""
+            echo "$email_body"
+        } > "$temp_email_file"
+        
+        if curl --url "smtp://$SMTP_SERVER:$SMTP_PORT" \
+                --ssl-reqd \
+                --mail-from "$EMAIL_FROM" \
+                --mail-rcpt "$EMAIL_TO" \
+                --user "$SMTP_USER:$SMTP_PASSWORD" \
+                --upload-file "$temp_email_file" >/dev/null 2>&1; then
+            log "info" "Email notification sent via SMTP to $EMAIL_TO for container $container_name"
+        else
+            log "error" "Failed to send email notification via SMTP for container $container_name"
+        fi
+        
+        rm -f "$temp_email_file"
+    else
+        log "warn" "No email sending method available (sendmail or curl with SMTP). Logging notification instead."
+        log "info" "NOTIFICATION: Container $container_name has update available: $current_image -> $available_update"
+    fi
+}
 
 # Function to document running containers and add to inventory
 document_containers() {
@@ -154,9 +232,11 @@ is_locally_built_image() {
         return 0  # Is locally built
     fi
     
-    # Check if image has no registry (no dots and no slashes)
-    if [[ ! "$image_name" =~ [./] ]]; then
-        return 0  # Is locally built
+    # Check if image has no registry and no tag (indicating custom build)
+    # Standard Docker Hub images like "nginx", "alpine", etc. are NOT locally built
+    # Only images without slashes AND with custom patterns are locally built
+    if [[ ! "$image_name" =~ [./] ]] && [[ "$image_name" =~ [_-] ]]; then
+        return 0  # Is locally built (custom name with underscore/hyphen)
     fi
     
     return 1  # Not locally built
@@ -220,14 +300,24 @@ update_containers() {
         
         # Get current image ID from inventory
         current_image_id=$(echo "$container_data" | jq -r '.imageId')
-        
-        # Check if image was updated
+         # Check if image was updated
         if [ "$new_image_id" = "$current_image_id" ]; then
             log "info" "No new image available for $container_name. Skipping update."
             continue
         fi
+
+        log "info" "New image available for $container_name."
         
-        log "info" "New image available for $container_name. Proceeding with update..."
+        # Check update approach label
+        update_approach=$(docker inspect "$container_name" --format '{{ index .Config.Labels "update-approach" }}' 2>/dev/null || echo "")
+        
+        if [ "$update_approach" = "notify" ]; then
+            log "info" "Container $container_name has 'update-approach=notify' label. Sending notification instead of updating."
+            send_email_notification "$container_name" "$current_image_id" "$new_image_id"
+            continue
+        fi
+        
+        log "info" "Proceeding with automatic update for $container_name..."
         
         # Back up container configuration
         container_backup_dir="$BACKUP_DIR/$container_name"
@@ -380,15 +470,24 @@ update_containers() {
             log "error" "Failed to create new container $container_name. Command: $create_command"
             continue
         fi
-        
-        # Start the container
+         # Start the container
         log "info" "Starting container $container_name"
         if ! docker start "$container_id"; then
             log "error" "Failed to start container $container_name. Skipping update."
             continue
         fi
-        
+
         log "info" "Container $container_name successfully updated to image $new_image_id"
+        
+        # Clean up old image if enabled
+        if [ "$CLEANUP_OLD_IMAGES" = "true" ]; then
+            log "info" "Cleaning up old image: $current_image_id"
+            if docker rmi "$current_image_id" 2>/dev/null; then
+                log "info" "Successfully removed old image $current_image_id"
+            else
+                log "warn" "Could not remove old image $current_image_id (may be in use by other containers)"
+            fi
+        fi
     done
     
     # Update inventory after updates

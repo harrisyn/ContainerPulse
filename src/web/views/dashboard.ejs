@@ -595,6 +595,11 @@
                                     <div class="alert alert-info bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded mb-4">
                                         <div class="font-semibold mb-2">
                                             <i class="fas fa-info-circle mr-2"></i> Update Available
+                                            <% if (container.updateStatus.updateApproach === 'notify') { %>
+                                                <span class="ml-2 bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">
+                                                    <i class="fas fa-envelope mr-1"></i>Notify Mode
+                                                </span>
+                                            <% } %>
                                         </div>
                                         <div class="update-details">
                                             <div class="flex justify-between mb-1">
@@ -620,9 +625,15 @@
 
                                 <div class="btn-group flex space-x-2">
                                     <% if (container.updateStatus && container.updateStatus.updateAvailable) { %>
-                                        <button class="btn btn-warning bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition">
-                                            <i class="fas fa-download mr-1"></i> Update
-                                        </button>
+                                        <% if (container.updateStatus.updateApproach === 'notify') { %>
+                                            <button class="btn btn-info bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition" disabled>
+                                                <i class="fas fa-envelope mr-1"></i> Notification Sent
+                                            </button>
+                                        <% } else { %>
+                                            <button class="btn btn-warning bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition">
+                                                <i class="fas fa-download mr-1"></i> Update
+                                            </button>
+                                        <% } %>
                                     <% } else { %>
                                         <button class="btn btn-outline-primary border border-blue-500 text-blue-500 px-4 py-2 rounded-md hover:bg-blue-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition">
                                             <i class="fas fa-search mr-1"></i> Check updates
